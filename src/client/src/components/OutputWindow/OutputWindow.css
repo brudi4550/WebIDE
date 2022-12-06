@@ -1,0 +1,4 @@
+.OutputWindow textarea {
+    resize: none;
+    min-height: 30vh;
+}
