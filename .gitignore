@@ -1,6 +1,10 @@
 # Additional
 .env
-src/server/files/
+src/server/files/compiled
+src/server/files/uncompiled
+src/server/files/bufferOutput.txt
+
+
 
 # Logs
 logs
