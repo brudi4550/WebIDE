@@ -1,4 +1,10 @@
 #!/bin/bash
+npm i
+cd src/client && npm i
+cd ../server
+touch .env && echo 'PORT=3001' > .env
+cd ../..
+
 JDK_INSTALLED=true
 which -s java
 if [ $? != 0 ]; then
