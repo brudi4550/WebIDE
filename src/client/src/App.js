@@ -1,127 +1,117 @@
 import './App.css';
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
 import NavBar from './components/NavBar';
 import OutputWindow from './components/OutputWindow/OutputWindow';
 import FileNameChooser from './components/FileNameChooser';
 
-class App extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      currentLanguage: 'java',
-      fileName: 'Main.java',
-      currentlyRunning: false,
-      editor: null,
-      currentOutput: '',
-      intervalID: null
-    }
-    this.handleLanguageChange = this.handleLanguageChange.bind(this);
-    this.handleEditorDidMount = this.handleEditorDidMount.bind(this);
-    this.handleRunCommand = this.handleRunCommand.bind(this);
-    this.handleStopCommand = this.handleStopCommand.bind(this);
-    this.receiveErrorOutput = this.receiveErrorOutput.bind(this);
-    this.handleFileNameChange = this.handleFileNameChange.bind(this);
-    this.switchOffOutputReceiver = this.switchOffOutputReceiver.bind(this);
-    this.switchOnOutputReceiver = this.switchOnOutputReceiver.bind(this);
-  }
+function App(props) {
+  const [language, setLanguage] = useState('java');
+  const [fileName, setFileName] = useState('Main.java');
+  const [editor, setEditor] = useState(null);
+  const [output, setOutput] = useState('');
+  const [intervalID, setIntervalID] = useState(null);
 
-  switchOnOutputReceiver() {
+  function switchOnOutputReceiver() {
     const id = setInterval(async () => {
       let res = await axios.post('/receiveBufferedOutput');
-      this.setState({ currentOutput: this.state.currentOutput + res.data.output });
+      setOutput(output => output + res.data.output);
       res = await axios.get('/isProgramRunning');
       if (res.data.isRunning === false) {
-        this.switchOffOutputReceiver();
+        switchOffOutputReceiver();
       }
     }, 1000);
-    this.setState({ intervalID: id })
+    setIntervalID(id);
   }
 
-  async receiveErrorOutput() {
+  async function receiveErrorOutput() {
     const res = await axios.post('/receiveBufferedOutput');
-    this.setState({ currentOutput: this.state.currentOutput + res.data.output });
+    if (res.data.output === '') {
+      setOutput(output => output + '\nSomething went wrong during compilation.')
+    } else {
+      setOutput(output => output + res.data.output);
+    }
   }
 
-  switchOffOutputReceiver() {
-    clearInterval(this.state.intervalID);
-    this.setState({ intervalID: null });
+  function switchOffOutputReceiver() {
+    clearInterval(intervalID);
+    setIntervalID(null);
   }
 
-  async handleEditorDidMount(editor, monaco) {
-    const res = await axios.get('/getLanguagePreview/' + this.state.currentLanguage);
-    editor.getModel().setValue(res.data.preview);
-    this.setState({
-      editor: editor,
-      fileName: res.data.fileName
-    });
+  async function handleEditorDidMount(editor, monaco) {
+    const [, preview] = await getLanguagePreview(language);
+    setEditor(editor);
+    updateEditorValue(editor, preview);
   }
 
-  async handleLanguageChange(language) {
-    console.log('Handling language change to ' + language);
+  async function handleLanguageChange(language) {
+    const [fileName, preview] = await getLanguagePreview(language);
+    updateEditorValue(editor, preview);
+    setLanguage(language);
+    setFileName(fileName);
+  }
+
+  async function getLanguagePreview(language) {
     const res = await axios.get('/getLanguagePreview/' + language);
-    this.state.editor.getModel().setValue(res.data.preview);
-    this.setState({
-      currentLanguage: language,
-      fileName: res.data.fileName
-    });
+    return [res.data.fileName, res.data.preview];
   }
 
-  handleFileNameChange(fileName) {
-    this.setState({ fileName: fileName })
+  function updateEditorValue(editor, value) {
+    editor.getModel().setValue(value);
   }
 
-  async handleRunCommand() {
-    this.setState({ currentOutput: '' });
+  function handleFileNameChange(fileName) {
+    setFileName(fileName);
+  }
+
+  async function handleRunCommand() {
+    setOutput('');
     await axios({
       method: 'post',
       url: '/sendCode',
       data: {
-        code: this.state.editor.getValue(),
-        language: this.state.currentLanguage,
-        fileName: this.state.fileName
+        code: editor.getValue(),
+        language: language,
+        fileName: fileName
       }
     });
     let compileFailed = false;
-    await axios.post('/compile/' + this.state.fileName)
+    await axios.post('/compile/' + fileName)
       .catch((err) => {
         compileFailed = true;
-        this.receiveErrorOutput();
+        receiveErrorOutput();
       });
     if (!compileFailed) {
-      console.log('posting run request');
-      await axios.post('/run/' + this.state.fileName);
-      this.switchOnOutputReceiver();
+      await axios.post('/run/' + fileName);
+      switchOnOutputReceiver();
     }
   }
 
-  async handleStopCommand() {
-    this.setState({ currentOutput: this.state.currentOutput + '\nStopped program.' });
-    this.switchOffOutputReceiver();
+  async function handleStopCommand() {
+    setOutput(output => output + '\nStopped program.')
+    switchOffOutputReceiver();
     await axios({
       method: 'post',
       url: '/stopProgram',
     })
   }
 
-  render() {
-    return (
-      <div className="App">
-        <div className="container">
-          <NavBar language={this.state.currentLanguage}
-            handleLanguageChange={this.handleLanguageChange}
-            handleRunCommand={this.handleRunCommand}
-            handleStopCommand={this.handleStopCommand} />
-          <FileNameChooser fileName={this.state.fileName} handleFileNameChange={this.handleFileNameChange}></FileNameChooser>
-          <Editor language={this.state.currentLanguage}
-            height="60vh"
-            onMount={this.handleEditorDidMount} />
-          <OutputWindow output={this.state.currentOutput} />
-        </div>
+  return (
+    <div className="App">
+      <div className="container">
+        <NavBar language={language}
+          handleLanguageChange={handleLanguageChange}
+          handleRunCommand={handleRunCommand}
+          handleStopCommand={handleStopCommand} />
+        <FileNameChooser fileName={fileName} handleFileNameChange={handleFileNameChange}></FileNameChooser>
+        <Editor language={language}
+          height="60vh"
+          onMount={handleEditorDidMount} />
+        <OutputWindow output={output} />
       </div>
-    )
-  }
+    </div>
+  )
 }
 
 export default App;

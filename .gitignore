@@ -1,5 +1,6 @@
 # Additional
 .env
+src/server/files/
 
 # Logs
 logs
