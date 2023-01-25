@@ -1,5 +1,5 @@
 # Additional
-.class
+*.class
 .env
 src/server/files/compiled
 src/server/files/uncompiled
