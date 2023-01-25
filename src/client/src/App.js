@@ -53,7 +53,7 @@ function App(props) {
   }
 
   async function getLanguagePreview(language) {
-    const res = await axios.get('/getLanguagePreview/' + language);
+    const res = await axios.get('/languagePreview/' + language);
     return [res.data.fileName, res.data.preview];
   }
 

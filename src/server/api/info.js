@@ -3,7 +3,7 @@ const fs = require('fs-extra');
 
 module.exports = function (app) {
 
-    app.get('/getLanguagePreview/:language', (req, res) => {
+    app.get('/languagePreview/:language', (req, res) => {
         const language = req.params['language'];
         let fileName;
         switch (language) {

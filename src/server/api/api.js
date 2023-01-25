@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const { exec, spawn, execSync } = require('child_process');
 
-let cmd = null;
+let cmd;
 
 function getFileEndingFromFile(fileName) {
     return fileName.split('.').pop();
@@ -54,7 +54,6 @@ module.exports = function (app) {
         const fileName = req.params['fileName'];
         console.log('Request to compile ' + fileName);
         const fileEnding = getFileEndingFromFile(fileName);
-        const className = fileName.substring(0, fileName.indexOf('.'));
         const filePath = path.join(__basedir, '/files/uncompiled', fileName);
         const destDir = path.join(__basedir, '/files/compiled/');
         switch (fileEnding) {
@@ -115,7 +114,6 @@ module.exports = function (app) {
     });
 
     app.post('/run/:fileName', async (req, res) => {
-        cmd = 'give temp value';
         const fileName = req.params['fileName'];
         console.log('Request to run ' + fileName);
         const fileEnding = getFileEndingFromFile(fileName);
@@ -157,7 +155,7 @@ module.exports = function (app) {
             stream.write(data.toString('ascii'));
         });
         cmd.on('close', () => {
-            cmd = null;
+            cmd = undefined;
             stream.write('\nProgram finished.');
         });
         res.status(200).send({
@@ -175,7 +173,7 @@ module.exports = function (app) {
     });
 
     app.post('/stopProgram', (req, res) => {
-        if (cmd != null) {
+        if (cmd != undefined) {
             cmd.kill();
             res.status(200).send({ message: 'Successfully stopped program.' });
         } else {
@@ -184,24 +182,7 @@ module.exports = function (app) {
     });
 
     app.get('/isProgramRunning', (req, res) => {
-        res.status(200).send({ isRunning: cmd != null });
-    });
-
-    app.post('/cleanup/:fileName', (req, res) => {
-        const fileName = req.params['fileName'];
-        fs.rmSync(path.join(__basedir, '/files/uncompiled', fileName));
-        fs.rmSync(path.join(__basedir, '/files/compiled', fileName));
-    });
-
-    app.get('/getSupportedLanguages', (req, res) => {
-        res.json({
-            "languages": [
-                { value: "c", label: "C" },
-                { value: "java", label: "Java" },
-                { value: "rust", label: "Rust" },
-                { value: "python", label: "python" },
-            ]
-        })
+        res.status(200).send({ isRunning: cmd != undefined });
     });
 
 }
