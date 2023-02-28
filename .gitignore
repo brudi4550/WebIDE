@@ -1,10 +1,10 @@
 # Additional
+.idea
 *.class
 .env
 src/server/files/compiled
 src/server/files/uncompiled
-src/server/files/bufferOutput.txt
-
+src/server/files/outputBuffer.txt
 
 
 # Logs
